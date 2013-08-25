@@ -1,24 +1,80 @@
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<!DOCTYPE html>
 
-<head>
-<title> Stefano's page </title>
-<link type="text/css" rel="stylesheet" href="style.css"/>
-</head>
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="style.css" />
 
-<body>
+    <title>Stefano Dissegna</title>
+  </head>
 
-<h1> My projects: </h1>
+  <body>
+    <div class="header">
+      <h1>
+        <a href="//stefano.dissegna.me">Stefano Dissegna</a>
+      </h1>
+      <div class="sub">
+        Just a developer
+      </div>
+    </div>
 
-<ul>
+    <div class="nav">
+      <a href="//stefano.dissegna.me">Home</a>
 
-  <li> <a href="http://github.com/stefano/primitivearc"> primitivearc </a> was born as a compiler for a really small subset of Arc targeting the <a href="http://www.parrot.org"> Parrot </a> VM. The original idea was to use that subset to develop a full blown Arc for Parrot, but now the goal of primitivearc is to <em> be </em> a full Arc implementation. In the future, it will also go beyond the language standard. </li>
+      <h2>Public Profiles</h2>
+      <ul>
+        <li>
+          <a href="http://www.linkedin.com/pub/stefano-dissegna/23/b03/349">Linkedin</a>
+        </li>
+        <li>
+          <a href="https://github.com/stefano">Github</a>
+        </li>
+      </ul>
 
-  <li> <a href="http://github.com/stefano/nyac"> Nyac </a> is a metacircular x86 compiler for a subset of Arc. It runs only under GNU/Linux, 32 bits. </li>
+      <h2>Contacts</h2>
+      <ul>
+        <li>
+          <a href="http://www.google.com/recaptcha/mailhide/d?k=012PG8mGc5ZCsOj6p_fYzL0A==&c=cStrpzYf4jqr4lQwk7m12UiBtm1fbDL19O3bp8U15Us=">Send me an email</a>
+        </li>
+      </ul>
+    </div>
 
-  <li> <a href="http://stefano.github.com/logoweb"> LogoWeb </a> is a simple turtle graphics program, written mainly to learn JavaScript and the &lt;canvas&gt; tag. </li>
+    <div class="content">
+      <h2>Personal Projects</h2>
+      <ul>
+        <li>
+          <h3><a href="https://play.google.com/store/apps/details?id=mail.com.gmail.stefano.devel.expensebot">ExpenseBot</a></h3>
+          <p>
+            A simple and clean android app to keep track of expenses. It allows users to register new expenses, to tag them and later to search through expenses by their tags. It can show a graph with the monthly summary of expenses for the current year. The graph can be restricted to the searched tags.
+          </p>
+          <p>
+            This is my first android app. I built it with the purpose of learning to develop for this platform.
+          </p>
+        </li>
+        <li>
+          <h3><a href="http://github.com/stefano/nyac">Nyac</a></h3>
+          <p>
+            A metacircular compiler for a subset of lisp-like language. It targets 32bit x86 GNU/Linux systems.
+          </p>
+        </li>
+        <li>
+          <h3><a href="http://github.com/stefano/cells-doc">Cells tutorial</a></h3>
+          <p>
+            Cells is a Common Lisp library that enables dataflow based programming.
+          </p>
+        <li>
+          <h3><a href="http://github.com/stefano/primitivearc">PrimitiveArc</a></h3>
+          <p>
+            A partial implementation of the <a href="http://en.wikipedia.org/wiki/Arc_%28programming_language%29">Arc</a> programming language, targeting the <a href="http://www.parrot.org">Parrot</a> VM. This implementation is quite old and won't work on the latest version of the Parrot VM.
+          </p>
+        </li>
 
-</ul>
-
-</body>
-
+        <li>
+          <h3><a href="http://github.com/stefano/logoweb">LogoWeb</a></h3>
+          <p>
+            A simple turtle graphics program, written mainly to learn JavaScript and the &lt;canvas&gt; tag back in university.
+          </p>
+        </li>
+      </ul>
+    </div>
+  </body>
 </html>

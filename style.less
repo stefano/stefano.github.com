@@ -7,22 +7,23 @@ http://yuilibrary.com/license/
 
 html{color:#000;background:#FFF}body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,textarea,p,blockquote,th,td{margin:0;padding:0}table{border-collapse:collapse;border-spacing:0}fieldset,img{border:0}address,caption,cite,code,dfn,em,strong,th,var{font-style:normal;font-weight:normal}ol,ul{list-style:none}caption,th{text-align:left}h1,h2,h3,h4,h5,h6{font-size:100%;font-weight:normal}q:before,q:after{content:''}abbr,acronym{border:0;font-variant:normal}sup{vertical-align:text-top}sub{vertical-align:text-bottom}input,textarea,select{font-family:inherit;font-size:inherit;font-weight:inherit}input,textarea,select{*font-size:100%}legend{color:#000}#yui3-css-stamp.cssreset{display:none}
 
-@color-fore-1: #FFCB9C;
-@color-fore-2: #FFB879;
-@color-fore: #FFA04C;
 
-@color-back-1: #36A6B1;
-@color-back-2: #68CED8;
-@color-back-darker: #126A73;
+@color-fore-1: #126A73;
+@color-fore-2: #68CED8;
+@color-fore: #126A73;
+@color-back-1: white;
+@color-back-darker: white;
+
+@left-spacing: 10%;
+@left-col-width: 8%;
+@left-col-spacing: 2%;
+@left-margin: @left-col-width + @left-col-spacing + @left-spacing;
+@right-spacing: @left-margin;
 
 @big-font: 28px;
 @medium-font: 24px;
 @nav-font: 12px;
 @normal-font: 14px;
-
-@left-col-width: 12%;
-@left-col-spacing: 8%;
-@right-spacing: @left-col-width + @left-col-spacing;
 
 body {
     font-family: Geneva, Tahoma, Verdana, sans-serif;
@@ -33,13 +34,17 @@ a {
     color: @color-fore-1;
 }
 
+a:visited {
+    color: @color-fore-2;
+}
+
 .nav {
     float: left;
     color: @color-fore-1;
     background-color: @color-back-1;
     border-radius: 10px;
     padding: 1em;
-    margin-left: 1em;
+    margin-left: @left-spacing;
     width: @left-col-width;
 }
 
@@ -54,7 +59,7 @@ a {
 
 .header {
     background-color: @color-back-1;
-    padding: 0.5em 0 0.5em (@left-col-width + @left-col-spacing);
+    padding: 0.5em 0 0.5em @left-margin;
     box-shadow: 0px 1px 6px @color-back-darker;
     margin-bottom: 1em;
     color: @color-fore-1;
@@ -73,12 +78,8 @@ a {
 }
 
 .content {
-    margin-left: @left-col-width + @left-col-spacing;
-    width: 100% - @left-col-width - @left-col-spacing - @right-spacing;
-}
-
-.content a {
-    color: @color-fore;
+    margin-left: @left-margin;
+    width: 100% - (@left-margin + @right-spacing);
 }
 
 .content h2 {

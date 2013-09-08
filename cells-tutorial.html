@@ -1,33 +1,34 @@
 ---
 layout: base
 title: Stefano Dissegna - Cells Tutorial
+style: /css/cells-tutorial.css
 ---
 
 <h2>Introduction</h2>
 
 <h3>What's cells?</h3>
 
-    <p>
-      <a href="http://www.cliki.net/Cells">Cells</a> is a Common Lisp library that extends the
-      language, and in particular its object system, to let
-      you write dataflow-driven programs. What does this
-      mean? This means that the flow of control of the
-      program depends no more on the sequence of
-      function/method calls, but on the data. Cells lets you
-      specify the dependence beetwen different slotsA slot is the Common Lisp equivalent of a class
-      instance variable in other languages
-      in a family of classes. Once these constraints have
-      been registered, the cells system will take care of
-      them, and will recalculate a value when some data on
-      which it depends has changed. As a consequence, the
-      programmer just has to tell the system the relationship
-      between the data, the burden of maintaining them true
-      is handled automatically by cells.
-    </p>
+<p>
+  <a href="http://www.cliki.net/Cells">Cells</a> is a Common Lisp library that extends the
+  language, and in particular its object system, to let
+  you write dataflow-driven programs. What does this
+  mean? This means that the flow of control of the
+  program depends no more on the sequence of
+  function/method calls, but on the data. Cells lets you
+  specify the dependence beetwen different slotsA slot is the Common Lisp equivalent of a class
+  instance variable in other languages
+  in a family of classes. Once these constraints have
+  been registered, the cells system will take care of
+  them, and will recalculate a value when some data on
+  which it depends has changed. As a consequence, the
+  programmer just has to tell the system the relationship
+  between the data, the burden of maintaining them true
+  is handled automatically by cells.
+</p>
 
-    <h3>How could it improve your programs?</h3>
+<h3>How could it improve your programs?</h3>
 
-    <p>
+<p>
 Cells may not be the panacea of programming, but it
 sure helps a lot in contexts where keeping a set of
 values consistent is crucial. A particular set of
@@ -59,6 +60,7 @@ scattered across different functions/methods.
 The installation is quite simple once you have a
 working Common Lisp system such as <a href="http://www.sbcl.org">SBCL</a> with <a href="http://www.quicklisp.org/beta/">Quicklisp</a> already installed and loaded. Start an interactive session and evaluate the following expression:
 
+</p>
 <pre>
 > (ql:quickload 'cells)
 To load "cells":
@@ -70,6 +72,7 @@ To load "cells":
 .......
 (CELLS)
 </pre>
+<p>
 
 That's it. If everything went right cells should be up and running.
 </p>
@@ -82,6 +85,7 @@ That's it. If everything went right cells should be up and running.
 Write the following piece of code in a file named
 hello-cells.lisp:
 
+</p>
 <pre>
 (defmodel hello-cells ()
   ((num :accessor num :initarg :num :initform (c-in 0))
@@ -94,10 +98,12 @@ hello-cells.lisp:
       (setf (num h) n)
       (format t "num is ~a and square-num is ~a~%" (num h) (square-num h)))))
 </pre>
+<p>
 
 Now start the SBCL interpreter in the same directory
 and evaluate the following:
 
+</p>
 <pre>
 > (asdf:oos 'asdf:load-op :cells)
 ...
@@ -116,6 +122,7 @@ num is 60 and square-num is 3600
 num is 60 and square-num is 3600
 NIL
 </pre>
+<p>
 
 What happens within the function 'hello'? First, an
 object of type hello-cells is created. After that the
@@ -129,12 +136,16 @@ though: we never gave it a value within the loop, but
 it always holds the square of the slot num! This is
 just cells working for us: we told the system that the relation
 
+</p>
 <pre>
  num*num=squarenum
 </pre>
+<p>
 
 must hold, and every time num changes, the expression
-<pre>(* (num self) (num self))</pre> is re-evaluated. Note that
+</p>
+<pre>(* (num self) (num self))</pre>
+<p> is re-evaluated. Note that
 the relation isn't a mathematical equation: you can't
 change square-num and expect to find its square root in num.
 </p>
@@ -145,20 +156,24 @@ change square-num and expect to find its square root in num.
 Lets now analyze the program. The very first line uses
 the construct defmodel:
 
+</p>
 <pre>
 (defmodel hello-cells ()
 </pre>
+<p>
 
 defmodel is very similar to defclass and everything
-valid in a defclass construct is valid within defmodeldefmodel is a layer built on top of defclass.
+valid in a defclass construct is valid within defmodel (defmodel is a layer built on top of defclass).
 The main difference is that all the slots defined
 within it will be tracked by cells, except slots that
 are explicitly declared to be ignored by the system by
 specifying :cell nil in the definition.
 
+</p>
 <pre>
 ((num :accessor num :initarg :num :initform (c-in 0))
 </pre>
+<p>
 
 Here we define the slot num as we would do within a
 standard class declaration. The difference is in its
@@ -176,10 +191,12 @@ avoiding to remember dependencies on slots that will
 never change. Slots initialized with c-in are usually
 called "input cells".
 
+</p>
 <pre>
 (square-num :accessor square-num
             :initform (c? (* (num self) (num self))))))
 </pre>
+<p>
 
 Now we define the slot square-num. There are two things
 to note here: (c? &lt;expr&gt;) and 'self'.The first is a
@@ -192,9 +209,11 @@ changes, (* (num self) (num self)) will be
 re-evaluated. Slots initialized with c? are called "
 ruled cells".
 
+</p>
 <pre>
 (let ((h (make-instance 'hello-cells)))
 </pre>
+<p>
 
 Here we use the function (make-instance &lt;model-name&gt;
 args*), to create an object of type &lt;model-name&gt;, in
@@ -202,9 +221,11 @@ this case hello-cells, as we would do to instantiate a
 normal class. You could specify an initial value for
 num now:
 
+</p>
 <pre>
 (let ((h (make-instance 'hello-cells :num (c-in 50))))
 </pre>
+<p>
 
 Note that you must repeat the (c-in ...) construct.
 This is because the behavior of the slot (input cell,
@@ -218,19 +239,23 @@ the first time, in this case the expression (* (num
 self) (num self)) is evaluated and the value given to
 the slot square-num.
 
+</p>
 <pre>
 (setf (num h) n)
 </pre>
+<p>
 
 This expression sets the value of the slot num to n.
 This is when cells comes into action: square-num
 depends on num, so (* (num self) (num self)) is
 re-evaluated after n has changed.
 
+</p>
 <pre>
 (format t "num is ~a and square-num is ~a~%" (num h)
 (square-num h))
 </pre>
+<p>
 
 Finally, we print the values of the two slots and
 discover that the value of square-num is correctly the
@@ -239,10 +264,12 @@ square of num.
 As a side note, you can reset the cells system by
 calling (cell-reset):
 
+</p>
 <pre>
 &gt; (cells-reset)
 NIL
 </pre>
+<p>
 
 This could be necessary after an error has corrupted
 the system and cells doesn't seem to work correctly
@@ -277,6 +304,7 @@ access through the method (value self)In older releases of cells you had to use 
 self) instead
 . The following example shows some of these things in action:
 
+</p>
 <pre>
 (defmodel node (family)
   ((val :initform (c-in nil) :initarg :val)))
@@ -302,10 +330,12 @@ self) instead
     (setf (val (fm-other :n7 :starting root)) 10)
     (format t "new value of the tree is ~a~%" (val root))))
 </pre>
+<p>
 
 Write it in a file (in this case hello-cells.lisp) and
 load it:
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -314,33 +344,40 @@ value of the tree is 68
 new value of the tree is 95
 NIL
 </pre>
+<p>
 
 Lets' see the most important parts of the program:
 
+</p>
 <pre>
 (defmodel node (family)
   ((val :initform (c-in nil) :initarg :val)))
 </pre>
+<p>
 
 Here we define the model node: we plan to build a
 family of nodes, so we inherit from the model family.
 The slot val will contain the value of the node.
 
+</p>
 <pre>
 (make-instance
  'node
  :val (c? (apply #'+ (mapcar #'val (kids self))))
 </pre>
+<p>
 
 Now we create the main node: its value is defined as
 the sum of all its children values. To get the children
 list we use the method (kids self).
 
+</p>
 <pre>
 :kids
 (c?
   (the-kids
 </pre>
+<p>
 
 We specify the children list using the :kids argument.
 the-kids builds a list of children using the following
@@ -349,9 +386,11 @@ argument is a list then it is flattened, e.g. (the-kids
 (list k1 (list (list k2 nil) k3))) will return a list
 with the kids k1, k2 and k3.
 
+</p>
 <pre>
 (make-kid 'node :md-name :n5 :val (c-in 5))
 </pre>
+<p>
 
 This is the first child of the main node: we give it a
 name with the :md-name argument to reference the node
@@ -361,6 +400,7 @@ make-instance its parent through the argument
 :fm-parent. make-kid does this for us passing self as
 the parent.
 
+</p>
 <pre>
 (make-kid
  'node
@@ -371,15 +411,18 @@ the parent.
      (make-kid 'node :md-name :n7 :val (c-in 7))
      (make-kid 'node :md-name :n9 :val (c-in 9)))))
 </pre>
+<p>
 
 The second child of the main node has two children and
 its value is the product of their values.
 
+</p>
 <pre>
 (format t "value of the tree is ~a~%" (val root))
 (setf (val (fm-other :n7 :starting root)) 10)
 (format t "new value of the tree is ~a~%" (val root))))
 </pre>
+<p>
 
 The body of the function prints the value of the tree,
 and through the output you can see that it depends
@@ -401,6 +444,7 @@ Cells lets you define a function to execute immediately
 after a c-in slot is modified. This function is called
 an "observer". To define it, use the defobserver construct:
 
+</p>
 <pre>
 (defobserver &lt;slot-name&gt; (&optional (&lt;self&gt; self)
                                     (&lt;new-value&gt; old-value)
@@ -408,6 +452,7 @@ an "observer". To define it, use the defobserver construct:
                                     (&lt;old-value-boundp&gt; old-value-boundp))
   &lt;function-body&gt;)
 </pre>
+<p>
 
 This function will be executed every time the slot
 &lt;slot-name&gt; of an object of type &lt;model-name&gt; is
@@ -424,13 +469,18 @@ Suppose we want to log all the values that the num slot
 assumes: we can do this defining an observer function.
 Add the following lines to hello-cells.lisp:
 
+</p>
 <pre>
 (defobserver num ((self hello-cells))
   (format t "new value of num is: ~a~%" new-value))
 </pre>
+<p>
 
-Now reload the file and try running <pre>(hello)</pre> again:
+Now reload the file and try running </p>
+<pre>(hello)</pre>
+<p> again:
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -451,6 +501,7 @@ num is 60 and square-num is 3600
 num is 60 and square-num is 3600
 NIL
 </pre>
+<p>
 
 As you can see from the output, every time we set (num
 h) with a different value, the action previously
@@ -465,6 +516,7 @@ need to propagate it: it didn't change!
 
 Now look at the following piece of code:
 
+</p>
 <pre>
 (defmodel str-model ()
   ((str :accessor str :initform (c-in "") :initarg :str)
@@ -481,6 +533,7 @@ Now look at the following piece of code:
       (format t "str is \"~a\", rev-str is \"~a\"~%"
               (str s) (rev-str s)))))
 </pre>
+<p>
 
 It does nothing new: it constrains rev-str to be the
 reverse of str, creates an instance of str-model and
@@ -490,6 +543,7 @@ string. Note that the second and the third strings of
 the list are actually equal. Lets try to run the code
 (supposing you wrote it in hello-cells.lisp):
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -505,6 +559,7 @@ changed!
 str is "!olleH", rev-str is "Hello!"
 NIL
 </pre>
+<p>
 
 The reversed string is calculated every time we set
 (str s), even when we're changing it from "Bye" to "Bye".
@@ -515,15 +570,19 @@ string (i.e. they don't have the same memory address)
 eql considers them to be different. The following piece
 of code shows us another problem: suppose we change
 
+</p>
 <pre>
 `("Hello!" "Bye" ,(concatenate 'string "By" "e") "!olleH")
 </pre>
+<p>
 
 to
 
+</p>
 <pre>
 `("Hello!" "Bye" "Bye" "!olleH")
 </pre>
+<p>
 
 depending on the Common Lisp implementation you run the
 program on you'll have a different output! Solving the
@@ -532,13 +591,16 @@ eql as the equality function. To supply your own
 equality function pass it to the :unchanged-if argument
 in the slot definition:
 
+</p>
 <pre>
 (str :accessor str :initform (c-in "") :initarg :str
      :unchanged-if #'equal)
 </pre>
+<p>
 
 Now we get the same expected result on any implementation:
 
+</p>
 <pre>
 changed!
 changed!
@@ -550,6 +612,7 @@ changed!
 str is "!olleH", rev-str is "Hello!"
 NIL
 </pre>
+<p>
 
 The equality function must accept two values: the new
 value of the slot and the old one.
@@ -596,6 +659,7 @@ second way, the second type only the first way and the
 third type is lazy in both ways. The following example
 shows the behavior of lazy cells:
 
+</p>
 <pre>
 (defmodel lazy-test ()
   ((lazy-1 :accessor lazy-1 :initform (c-formula (:lazy :once-asked)
@@ -627,9 +691,11 @@ shows the behavior of lazy cells:
     (setf (val l) '(who will be evaluated?))
     (print-lazies l)))
 </pre>
+<p>
 
 As usual, load it and run it:
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -652,6 +718,7 @@ evaluating lazy-1!
 lazy-1: (WHO WILL BE EVALUATED? !!)
 NIL
 </pre>
+<p>
 
 As you can see from the code, to declare a ruled cell
 to be lazy you just need to use the three constructs
@@ -684,6 +751,7 @@ been re-evaluated its value becomes its previous one
 plus the one returned by the body. The following
 example shows drifter cells in action:
 
+</p>
 <pre>
 (defmodel counter ()
   ((how-many :accessor how-many
@@ -699,12 +767,14 @@ example shows drifter cells in action:
       (format t "current elements: ~{~a ~}~%" (current-elems m))
       (format t "~a elements seen so far~%" (how-many m)))))
 </pre>
+<p>
 
 try-counter iterates other a list setting current-elems
 to a list of values, and after each iteration how-many
 will hold the total number of the elements within the
 lists seen so far. The output will be:
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -717,14 +787,17 @@ elements: 1 2 3 4
 9 elements seen so far
 NIL
 </pre>
+<p>
 
 The important passage in the code is the initialization
 of how-many:
 
+</p>
 <pre>
 (c... (0)
   (length (^current-elems)))
 </pre>
+<p>
 
 (^current-elems) is just a shortcut for (current-elems self).
 The construct (c... (&lt;initial-value&gt;) &lt;body&gt;)
@@ -746,6 +819,7 @@ complete running the code needed to keep it in a
 consistent state. The following code shows how this
 situation could arise:
 
+</p>
 <pre>
 (defmodel cycle ()
   ((cycle-a :accessor cycle-a :initform (c-in nil))
@@ -762,6 +836,7 @@ situation could arise:
     (setf (cycle-a m) '(? !))
     (format t "~a and ~a" (cycle-a m) (cycle-b m))))
 </pre>
+<p>
 
 When try-cycle sets cycle-a, its observer gets called,
 which sets cycle-b which in turn sets cycle-a. This is
@@ -770,6 +845,7 @@ second time we set cycle-a we give it the same value we
 gave it the first time, so the cells engine should stop
 the propagation. Lets see if this does actually work:
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -779,6 +855,7 @@ wrapping code in WITH-INTEGRITY
 
    [Condition of type SIMPLE-ERROR]
 </pre>
+<p>
 
 The message could vary depending on your Common Lisp
 implementation, but one thing is clear: the code
@@ -791,38 +868,47 @@ sure that cycle-a is consistent when that piece of code
 is run. The same problem exists for cycle-b and the
 solution is the same. We need then to change
 
+</p>
 <pre>
 (defobserver cycle-a ()
   (setf (cycle-b self) new-value))
 </pre>
+<p>
 
 to
 
+</p>
 <pre>
 (defobserver cycle-a ()
   (with-integrity (:change)
     (setf (cycle-b self) new-value)))
 </pre>
+<p>
 
 and
 
+</p>
 <pre>
 (defobserver cycle-b ()
   (setf (cycle-a self) new-value))
 </pre>
+<p>
 
 to
 
+</p>
 <pre>
 (defobserver cycle-b ()
   (with-integrity (:change)
     (setf (cycle-a self) new-value)))
 </pre>
+<p>
 
 Now if we reload the code and run it we'll get the
 correct result. Make sure to call (cells-reset) after
 an error has occurred.
 
+</p>
 <pre>
 &gt; (cells-reset)
 NIL
@@ -832,6 +918,7 @@ T
 (? !) and (? !)
 NIL
 </pre>
+<p>
 </p>
 
 <h2>Synapses</h2>
@@ -850,6 +937,7 @@ synapses you can tell the system if a change should be
 propagated or not. The following example shows a "clock"
 that changes only after a minimal amount of time:
 
+</p>
 <pre>
 (defmodel syn-time ()
   ((current-time :accessor current-time :initarg :current-time
@@ -868,6 +956,7 @@ that changes only after a minimal amount of time:
       (incf (current-time tm))
       (format t "time-elapsed is ~a~%" (time-elapsed tm)))))
 </pre>
+<p>
 
 time-elapsed holds the same value of current-time, but
 it changes only when current-time changes by at least
@@ -876,10 +965,12 @@ with a loop that increments current-time by one unit
 and then shows elapsed-time. The most important part of
 the program is
 
+</p>
 <pre>
 (f-sensitivity :syn ((wait-time self))
   (current-time self))
 </pre>
+<p>
 
 Here we create a synapse named :syn. It is of type
 f-sensitivity: (current-time self) is evaluated always,
@@ -889,6 +980,7 @@ lesser than (wait-time self), then the slot
 elapsed-time won't change and, consequently, nothing
 will be propagated. The expected result then will be:
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -915,6 +1007,7 @@ time +1
 time-elapsed is 10
 NIL
 </pre>
+<p>
 
 time-elapsed changes only when the accumulated
 difference is at least wait-time (2 in this case).
@@ -928,10 +1021,12 @@ As it frequently happens, you may need a type of
 synapse that is not available. In this case, you can
 define your own synapses using the construct with-synapse.
 
+</p>
 <pre>
 (with-synapse &lt;id&gt; (&rest &lt;vars&gt;)
   &lt;body&gt;)
 </pre>
+<p>
 
 &lt;vars&gt; is a valid variable declaration list such as
 that of the let form. These variables are created and
@@ -944,6 +1039,7 @@ values: the value to return and one keyword out of
 should be propagated or not. For example, we could have
 a ruled cell that propagates only when another cell is odd:
 
+</p>
 <pre>
 (defmodel my-syn-test ()
   ((num :accessor num :initform (c-in 0))
@@ -965,6 +1061,7 @@ a ruled cell that propagates only when another cell is odd:
       (setf (num m) n)
       (format t "odd-num is ~a~%" (odd-num m)))))
 </pre>
+<p>
 
 The crucial part is the values returned by
 with-synapse's body. When num is odd, we return it
@@ -972,6 +1069,7 @@ together with :propagate, otherwise we return a value
 that will be ignored (because it won't be propagated)
 and :no-propagate. Here is the output:
 
+</p>
 <pre>
 &gt; (load "hello-cells.lisp")
 T
@@ -1003,6 +1101,7 @@ Propagated!
 odd-num is 15
 NIL
 </pre>
+<p>
 
 You can see that odd-num changes only when we return :propagate.
 We could have returned any other value. The only
@@ -1020,18 +1119,21 @@ them actually did something beside showing cells
 behavior. Now we will see how to use cells to aid us
 resolving a sudoku puzzle. First of all, some constants:
 
+</p>
 <pre>
 (defparameter *all-values* '(1 2 3 4 5 6 7 8 9))
 (defparameter *row-len* 9)
 (defparameter *sq-size* 3)
 (defparameter *col-len* 9)
 </pre>
+<p>
 
 The input board is a vector of vectors: every position
 contains either a number from 1 to 9 or a '? telling
 the program that it must find a value to fill in that
 position. The following is an empty board:
 
+</p>
 <pre>
 (defparameter *board*
   #(#(? ? ? ? ? ? ? ? ?)
@@ -1044,6 +1146,7 @@ position. The following is an empty board:
     #(? ? ? ? ? ? ? ? ?)
     #(? ? ? ? ? ? ? ? ?)))
 </pre>
+<p>
 
 We will represent the playing board with the model
 board, which has two slots: complete is a boolean that
@@ -1062,6 +1165,7 @@ and group is a reference to an object of type
 square-group: squares in the same group cannot have the
 same exact-val.
 
+</p>
 <pre>
 (defmodel square-group ()
   ((constraining :initform (c-in nil) :initarg :constraining
@@ -1102,11 +1206,13 @@ same exact-val.
       (format out "~a " (exact-val (at (^squares) r c))))
       (format out "~%")))
 </pre>
+<p>
 
 Some helper functions to get a value from the board and
 to find the next position without a value. A position
 is a list of two numbers: the row and the column.
 
+</p>
 <pre>
 (defun at (board r c)
   (elt (elt board r) c))
@@ -1131,12 +1237,14 @@ return NIL if there is none"
             (next-to-try board pos)
             pos)))))
 </pre>
+<p>
 
 We create a group for every square. The same square
 belongs to more than one group. We put in the same
 group of a certain square all the squares in the same
 line, in the same column or in the same block.
 
+</p>
 <pre>
 (defun make-groups (squares)
   (dotimes (r *col-len*)
@@ -1171,11 +1279,13 @@ board r c)"
                 (subseq board upper-left-r
                         (+ upper-left-r *sq-size*))))))
 </pre>
+<p>
 
 To create the board we map the input board and for
 every position we create a square. Then we build all
 the groups.
 
+</p>
 <pre>
 (defun make-board (b)
   (let ((b (make-instance
@@ -1186,11 +1296,13 @@ the groups.
     (make-groups (squares b))
     b))
 </pre>
+<p>
 
 The following code looks for a solution, trying all the
 possible combinations. Thanks to how we defined
 possible-vals, impossible combinations are never tried.
 
+</p>
 <pre>
 (defun search-solution (b &optional (next
                                      (next-to-try (squares b) (list 0 -1))))
@@ -1207,20 +1319,24 @@ possible-vals, impossible combinations are never tried.
       ;; tried all the positions: have we completed the board?
       (complete b)))
 </pre>
+<p>
 
 Finally the main function: it accepts an input board
 and prints a solution.
 
+</p>
 <pre>
 (defun sudoku (the-board)
   (let ((b (make-board the-board)))
     (search-solution b)
     (format t "Solution:~%~a~%" b)))
 </pre>
+<p>
 
 Save it in a file named "sudoku.lisp" and try it on the
 empty board:
 
+</p>
 <pre>
 &gt; (load "sudoku.lisp")
 T
@@ -1237,10 +1353,12 @@ Solution:
 9 7 8 5 3 1 6 4 2
 NIL
 </pre>
+<p>
 
 It does find a solution, but it takes quite a while to
 print it:
 
+</p>
 <pre>
 &gt; (time (sudoku *board*))
 Solution:
@@ -1263,6 +1381,7 @@ Evaluation took:
   155,622,072 bytes consed.
 NIL
 </pre>
+<p>
 
 It takes 2.4 seconds and it allocates more than 155 MB
 of memory! We can do better by noticing that when we
@@ -1274,6 +1393,7 @@ solution is to use a lazy cell and to do that we change
 the initform of possible-vals to use c?_ instead of c?.
 Change it and run the program again:
 
+</p>
 <pre>
 &gt; (load "sudoku.lisp")
 T
@@ -1298,6 +1418,7 @@ Evaluation took:
   9,517,528 bytes consed.
 NIL
 </pre>
+<p>
 
 Now the speed is much better (more than ten times
 faster), it allocates only 9.5 MB of memory, and we

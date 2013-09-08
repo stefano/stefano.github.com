@@ -2,9 +2,11 @@
 
 <html>
   <head>
-    <link rel="stylesheet" type="text/css" href="style.css" />
-
     <title>{{ page.title }}</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    {% if page.style %}
+    <link rel="stylesheet" type="text/css" href="{{ page.style }}" />
+    {% endif %}
   </head>
 
   <body>

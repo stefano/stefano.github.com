@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+
+    <title>{{ title }}</title>
+  </head>
+
+  <body>
+    <div class="header">
+      <h1>
+        <a href="//stefano.dissegna.me">Stefano Dissegna</a>
+      </h1>
+      <div class="sub">
+        Just a developer
+      </div>
+    </div>
+
+    <div class="nav">
+      <ul>
+        <li>
+          <a href="//stefano.dissegna.me">Home</a>
+        </li>
+        <li>
+          <a href="//stefano.dissegna.me/cells-tutorial.html">Cells Tutorial</a>
+        </li>
+      </ul>
+
+      <h2>Public Profiles</h2>
+      <ul>
+        <li>
+          <a href="http://www.linkedin.com/pub/stefano-dissegna/23/b03/349">Linkedin</a>
+        </li>
+        <li>
+          <a href="https://github.com/stefano">Github</a>
+        </li>
+      </ul>
+
+      <h2>Contacts</h2>
+      <ul>
+        <li>
+          <a href="http://www.google.com/recaptcha/mailhide/d?k=012PG8mGc5ZCsOj6p_fYzL0A==&c=cStrpzYf4jqr4lQwk7m12UiBtm1fbDL19O3bp8U15Us=">Send me an email</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="content">
+      {{ content }}
+    </div>
+
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-15856965-3', 'dissegna.me');
+      ga('send', 'pageview');
+    </script>
+  </body>
+</html>

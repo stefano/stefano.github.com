@@ -15,9 +15,8 @@ style: /css/cells-tutorial.css
   mean? This means that the flow of control of the
   program depends no more on the sequence of
   function/method calls, but on the data. Cells lets you
-  specify the dependence beetwen different slotsA slot is the Common Lisp equivalent of a class
-  instance variable in other languages
-  in a family of classes. Once these constraints have
+  specify the dependencies beetwen different slots in a family of classes.
+  Once these constraints have
   been registered, the cells system will take care of
   them, and will recalculate a value when some data on
   which it depends has changed. As a consequence, the
@@ -300,9 +299,7 @@ say, for example, "give me all the successors of type my-type"
 . To use these features your models must inherit from
 the model 'family'. Models that inherit from family
 have also a .value slot associated, which you can
-access through the method (value self)In older releases of cells you had to use (md-value
-self) instead
-. The following example shows some of these things in action:
+access through the method (value self). The following example shows some of these things in action:
 
 </p>
 <pre>
@@ -1103,10 +1100,9 @@ NIL
 </pre>
 <p>
 
-You can see that odd-num changes only when we return :propagate.
-We could have returned any other value. The only
+You can see that odd-num changes only when we return :propagate (we could have returned any other value. The only
 requirement to propagate is to return something
-different from :no-propagate. When we return :no-propagate odd-num doesn't change.
+different from :no-propagate). When we return :no-propagate odd-num doesn't change.
 We didn't need to carry some state between different
 executions of the body, so we left the &lt;vars&gt; list empty.
 </p>

@@ -6,3 +6,13 @@ h3 {
     font-style: italic;
     font-size: 18px;
 }
+
+p {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    width: 70ch;
+}
+
+.content {
+    margin-bottom: 2em;
+}

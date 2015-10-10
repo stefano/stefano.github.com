@@ -1,0 +1,552 @@
+---
+layout: base
+style: css/bulk_insert.css
+title: Stefano Dissegna - Bulk Inserts Performance with Django and PostgreSQL
+---
+
+<h2>Bulk Inserts Performance with Django and PostgreSQL</h2>
+
+<p>
+  Using the <a href="https://www.djangoproject.com/">Django</a> ORM is often a productivity boon. It allows you to
+  describe models and interact with your data in pure python code
+  instead of mixing it with SQL queries. It removes the need for a lot
+  of boilerplate by reducing the impedance mismatch between the
+  persisted relational data and the object model used by the
+  application.
+</p>
+
+<p>
+  The Django ORM also provides useful hooks that you can use to
+  enforce models business
+  logic. Custom <a href="https://docs.djangoproject.com/en/1.8/ref/models/instances/#django.db.models.Model.save">save()</a>
+  methods
+  and <a href="https://docs.djangoproject.com/en/1.8/topics/signals/">signals</a>
+  are guaranteed to run on every interaction with your model as long
+  as you use the ORM.
+</p>
+
+<p>
+  These abstractions come with a performance cost. They work under the
+  assumption that your code operates on records one by one. For
+  example, save() is called on every single model instance, and
+  signals receive one instance at a time.
+</p>
+
+<p>
+  When you only need to insert a few records into the database, this
+  is not an issue. But when you need to save a batch of records, the
+  performance cost of sending records to the database one by one is
+  huge. Each round trip to the database has a fixed cost: a query
+  needs to be sent to the database server which might be on a
+  different machine. On top of that, the database can only see one
+  request at a time and can't optimize multiple records
+  creation. Sending a single request to create a batch of records
+  minimizes the impact of the round trip to the server, and allows the
+  database to batch the writes to the disk.
+</p>
+
+<p>
+  We can see how much the ORM can affect performance by running a
+  simple benchmark. Each script starts from an empty database and
+  inserts into the database 10,000 records of the following model:
+</p>
+
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">models</span>
+
+
+<span class="k">class</span> <span class="nc">TestModel</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">field_1</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">IntegerField</span><span class="p">()</span>
+    <span class="n">field_2</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">)</span>
+    <span class="n">field_3</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">()</span>
+
+    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">app_label</span> <span class="o">=</span> <span class="s">&#39;app&#39;</span>
+</pre></div>
+
+<p>
+  It's a very simple model, with only three fields of three different
+  types on top of the implicit id field. It has no foreign keys.
+</p>
+
+<p>
+  All the code used for this benchmark is available
+  <a href="https://github.com/stefano/bulk_insert_experiment">here</a>. You
+  can clone the repository and follow the instruction in the README to
+  run the scripts yourself and reproduce the results presented here.
+</p>
+
+<h2>The Setup</h2>
+
+<p>
+  The scripts were run using the following setup:
+</p>
+
+<ul>
+  <li>Operating System: <a href="http://www.ubuntu.com/">Ubuntu</a> 14.04</li>
+  <li>Database: <a href="http://www.postgresql.org/">PostgreSQL</a> 9.3, using the default Ubuntu configuration</li>
+  <li>Database driver: psycopg2 2.6.1</li>
+  <li>Django 1.8.6</li>
+  <li>Hardware: Intel i5-4570S CPU, 16GB of RAM, Samsung 840 EVO SSD</li>
+</ul>
+
+<p>
+  The database and the python scripts were run on the same
+  computer. This minimizes the cost of round trip time to the database,
+  skewing the result in favor of non-batched operations. As we will
+  see, despite this advantage the performance difference between
+  non-batched and batched operations is still huge.
+</p>
+
+<h2>ORM create()</h2>
+
+<p>
+  The more natural way to create records using the ORM is to create
+  them one by one, using a simple loop:
+</p>
+
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">utils</span>
+
+<span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">timezone</span>
+
+<span class="kn">from</span> <span class="nn">app</span> <span class="kn">import</span> <span class="n">models</span>
+
+
+<span class="k">def</span> <span class="nf">orm_create</span><span class="p">(</span><span class="n">n_records</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_records</span><span class="p">):</span>
+        <span class="n">models</span><span class="o">.</span><span class="n">TestModel</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">field_1</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+            <span class="n">field_2</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+            <span class="n">field_3</span><span class="o">=</span><span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="n">orm_create</span><span class="p">)</span>
+</pre></div>
+
+<p>
+  This approach has several advantages: it's simple, easy to
+  understand and respects all your custom model code.
+</p>
+
+<p>
+  Unfortunately, performance is poor:
+</p>
+
+<pre>
+  $ python orm_create.py
+  Created 10000 records in 12685ms
+</pre>
+
+<p>
+  If you need to create lots of records, this kind of performance is
+  often unacceptable.
+</p>
+
+<h2>ORM bulk_create()</h2>
+
+<p>
+  Django does offer a method to handle exactly this
+  scenario: <a href="https://docs.djangoproject.com/en/1.8/ref/models/querysets/#bulk-create">bulk_create</a>. You
+  can pass it a list of new model instances to create, and it will
+  issue bulk queries to the database:
+</p>
+
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">utils</span>
+
+<span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">timezone</span>
+
+<span class="kn">from</span> <span class="nn">app</span> <span class="kn">import</span> <span class="n">models</span>
+
+
+<span class="k">def</span> <span class="nf">orm_bulk_create</span><span class="p">(</span><span class="n">n_records</span><span class="p">):</span>
+    <span class="n">instances</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">models</span><span class="o">.</span><span class="n">TestModel</span><span class="p">(</span>
+            <span class="n">field_1</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+            <span class="n">field_2</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span>
+            <span class="n">field_3</span><span class="o">=</span><span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_records</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="n">models</span><span class="o">.</span><span class="n">TestModel</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">bulk_create</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="n">orm_bulk_create</span><span class="p">)</span>
+</pre></div>
+
+<p>
+  The performance boost is huge:
+</p>
+
+<pre>
+  $ python orm_bulk_create.py
+  Created 10000 records in 334ms
+</pre>
+
+<p>
+  Performance comes at a price: your custom save() method and signals
+  won't be invoked. It also doesn't work with table inheritance.
+</p>
+
+<p>
+  In short, you can no longer trust the ORM to enforce your business
+  logic, losing lots of the advantages of using an ORM in the first
+  place.
+</p>
+
+<h2>SQL INSERT</h2>
+
+<p>
+  Let's now turn away from the ORM to see if we can further improve
+  performance using pure SQL queries.
+</p>
+
+<p>
+  A first, simple approach is to create records one by one using
+  INSERT statements:
+</p>
+
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">utils</span>
+
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">timezone</span>
+
+
+<span class="k">def</span> <span class="nf">sql_simple_insert</span><span class="p">(</span><span class="n">n_records</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">closing</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">())</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_records</span><span class="p">):</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="s">&#39;INSERT INTO app_testmodel (field_1, field_2, field_3)&#39;</span>
+                <span class="s">&#39;VALUES (</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">)&#39;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">()),</span>
+            <span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="n">sql_simple_insert</span><span class="p">)</span>
+</pre></div>
+
+<p>
+  Similarly to the first ORM approach, creating records one by one
+  performs poorly:
+</p>
+
+<pre>
+  $ python sql_simple_insert.py
+  Created 10000 records in 3968ms
+</pre>
+
+<p>
+  It's about three times faster than creating records one by one using
+  the ORM. That's how much the ORM abstractions are costing us. The
+  queries sent to the database are the same, but the ORM needs to call
+  custom validation and save methods and invoke all signals. It also
+  needs to build the SQL insert query every single time.
+</p>
+
+<p>
+  Using SQL INSERT statements has the same disadvantage we saw with
+  bulk_create, in that custom model business logic is not executed,
+  but it only has a fraction of the performance gains.
+</p>
+
+<h2>SQL INSERT, using executemany</h2>
+
+<p>
+  The psycopg2 cursor has a method to execute a single SQL statement
+  multiple times, using a different set of arguments each time. It
+  looks like a simple way to batch operations without changing the
+  code too much:
+</p>
+
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">utils</span>
+
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">timezone</span>
+
+
+<span class="k">def</span> <span class="nf">sql_simple_insert_executemany</span><span class="p">(</span><span class="n">n_records</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">closing</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">())</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span>
+            <span class="s">&#39;INSERT INTO app_testmodel (field_1, field_2, field_3)&#39;</span>
+            <span class="s">&#39;VALUES (</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">)&#39;</span><span class="p">,</span>
+            <span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">())</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_records</span><span class="p">)],</span>
+        <span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="n">sql_simple_insert_executemany</span><span class="p">)</span>
+</pre></div>
+
+<p>
+  Despite looking like a batch operation, performance didn't really
+  improve:
+</p>
+
+<pre>
+  $ python sql_simple_insert_executemany.py
+  Created 10000 records in 3693ms
+</pre>
+
+<p>
+  As it turns out, under the hood psycopg2 is still sending the
+  queries one by one to the database. With that in mind, it's not
+  surprising that performance is so close to the previous approach.
+</p>
+
+<h2>SQL batch INSERT</h2>
+
+<p>
+  We can do a lot better by building a single SQL INSERT statement to
+  create multiple records at once, similar to the SQL built by
+  bulk_create:
+</p>
+
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">utils</span>
+
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">timezone</span>
+
+
+<span class="k">def</span> <span class="nf">sql_batch_insert</span><span class="p">(</span><span class="n">n_records</span><span class="p">):</span>
+    <span class="n">sql</span> <span class="o">=</span> <span class="s">&#39;INSERT INTO app_testmodel (field_1, field_2, field_3) VALUES {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">&#39;(</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">)&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_records</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_records</span><span class="p">):</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">()])</span>
+
+    <span class="k">with</span> <span class="n">closing</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">())</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="n">sql_batch_insert</span><span class="p">)</span>
+</pre></div>
+
+<p>
+  Building the SQL query manually adds more noise to the code than
+  using bulk_create, but other than that it has no significant
+  disadvantage:
+</p>
+
+<pre>
+  $ python sql_batch_insert.py
+  Created 10000 records in 167ms
+</pre>
+
+<p>
+  Performance is in the same order of magnitude as bulk_create, and as
+  we saw when comparing the standard ORM create() method against
+  simple SQL INSERT statements, the ORM overhead is non-trivial.
+</p>
+
+<h2>PostgreSQL COPY FROM</h2>
+
+<p>
+  If we leave the realm of standard, portable SQL, PostgreSQL offers
+  an <a href="http://www.postgresql.org/docs/9.3/static/sql-copy.html">extension</a>
+  to import and export records in bulk.
+</p>
+
+<p>
+  Using COPY FROM we can import data from a CSV file. The CSV file can
+  also be read directly from the connection input stream. psycopg2
+  exposes this functionality in the
+  cursor <a href="http://initd.org/psycopg/docs/cursor.html#cursor.copy_from">copy_from()</a>
+  method, which accepts any python file-like object to read the
+  records from.
+</p>
+
+<p>
+  We can use StringIO together with the csv module to build this
+  file-like object in memory, and then import it in the database using
+  copy_from():
+</p>
+
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">utils</span>
+
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">from</span> <span class="nn">cStringIO</span> <span class="kn">import</span> <span class="n">StringIO</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+<span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">timezone</span>
+
+
+<span class="k">def</span> <span class="nf">copy_from</span><span class="p">(</span><span class="n">n_records</span><span class="p">):</span>
+    <span class="n">stream</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">()</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_records</span><span class="p">):</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()])</span>
+
+    <span class="n">stream</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">closing</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">())</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">copy_from</span><span class="p">(</span>
+            <span class="nb">file</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span>
+            <span class="n">table</span><span class="o">=</span><span class="s">&#39;app_testmodel&#39;</span><span class="p">,</span>
+            <span class="n">sep</span><span class="o">=</span><span class="s">&#39;</span><span class="se">\t</span><span class="s">&#39;</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;field_1&#39;</span><span class="p">,</span> <span class="s">&#39;field_2&#39;</span><span class="p">,</span> <span class="s">&#39;field_3&#39;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="n">copy_from</span><span class="p">)</span>
+</pre></div>
+
+<p>
+  The code is relatively easy to understand and arguably more readable
+  than the batch SQL INSERT query, but not as much as
+  bulk_create. Performance is better than any of the other approaches:
+</p>
+
+<pre>
+  $ python copy_from.py
+  Created 10000 records in 96ms
+</pre>
+
+<p>
+  We removed most of the overhead associated with creating and sending
+  queries, and it shows. It's about three times faster than using the
+  fastest ORM method.
+</p>
+
+<p>
+  This is possibly the more performant method to create multiple
+  records in PostgreSQL.
+</p>
+
+<h2>Generating the data in the database</h2>
+
+<p>
+  Finally, we can improve performance further by cheating. If we
+  generate the data directly in the database, we don't need to send it
+  across the wire, removing all the network overhead. On top of that,
+  the database won't need to parse all the records data, since we're
+  not actually sending any record.
+</p>
+
+<p>
+  This approach is not nearly as generic as the previous ones: in
+  almost all practical cases, data has to come from somewhere (an
+  external file, a web request, etc.) and is not automatically
+  generated inside the database.
+</p>
+
+<p>
+  In some rare cases though, you do need to generate records
+  programmatically with no external input and this approach can be
+  used. Examples of that are static tables and denormalized tables
+  automatically generated from other tables contents.
+</p>
+
+<p>
+  This approach also serves as a lower boundary on how fast we can
+  hope to insert new records into the database, showing how close to
+  optimal the previous methods were.
+</p>
+
+<p>
+  We can
+  use <a href="http://www.postgresql.org/docs/9.3/static/functions-srf.html">GENERATE_SERIES</a>
+  to generate the 10000 records to insert:
+</p>
+
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">utils</span>
+
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">connection</span>
+
+
+<span class="k">def</span> <span class="nf">generate_data_in_database</span><span class="p">(</span><span class="n">n_records</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">closing</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">())</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            INSERT INTO app_testmodel (field_1, field_2, field_3)</span>
+<span class="sd">            SELECT</span>
+<span class="sd">                i,</span>
+<span class="sd">                i::text,</span>
+<span class="sd">                now()</span>
+<span class="sd">            FROM</span>
+<span class="sd">                generate_series(0, %s - 1) AS s(i)</span>
+<span class="sd">            &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">n_records</span><span class="p">,),</span>
+        <span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="n">generate_data_in_database</span><span class="p">)</span>
+</pre></div>
+
+<p>
+  Performance is obviously better than the previous approaches:
+</p>
+
+<pre>
+  $ python generate_data_in_database.py
+  Created 10000 records in 44ms
+</pre>
+
+<p>
+  If you find yourself with a problem in which this approach can be
+  used, by all means do so, because there is no faster way to insert
+  new records.
+</p>
+
+<h2>Conclusions</h2>
+
+<p>
+  The Django ORM design offers a good solution when you need to
+  operate on a small set of records, which is the most common scenario
+  in web applications. Using the hooks it provides can lead to
+  readable, well encapsulated code.
+</p>
+
+<p>
+  On the other hand, as the number of records you need to operate on
+  at once increases, the ORM becomes a performance liability.
+</p>
+
+<p>
+  If you took advantage of the hooks available in the ORM, and then
+  you find yourself in a situation where you need to import a large
+  amount of records, you will be in a tough spot.
+</p>
+
+<p>
+  You will need to decide between replacing all the custom model code
+  with a batch friendly solution, or duplicating the necessary
+  business logic in the code that inserts the records in batches. The
+  first approach can be a lot of work if you have more than a handful
+  of models and complex logic. The second one can be a good trade-off
+  if you only need to batch load a small subset of the models, and
+  their logic is simple, but duplicating logic can easily lead to
+  inconsistencies, bugs, and duplicate maintenance effort.
+</p>
+
+<p>
+  Of course, if you can afford it, you can also decide to accept the
+  performance impact, and insert records one by one.
+</p>
+
+<p>
+  As it often happens when it comes to programming, deciding between
+  taking advantage of the ORM or not is a trade-off between immediate
+  convenience and performance.
+</p>
+
+<p>
+  Make sure you evaluate those trade-offs for your particular situation
+  before blindly deciding in favor or against the ORM.
+</p>

@@ -73,3 +73,9 @@
 .content .highlight {
     margin-top: 1em;
 }
+
+.content p.footnote {
+    font-style: italic;
+    margin-top: 4em;
+    color: #666;
+}
